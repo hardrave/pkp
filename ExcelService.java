@@ -16,14 +16,14 @@ public class ExcelService {
     /**
      * Main method to generate Excel file.
      *
-     * @param pkpPdf           single PKP info object
-     * @param pksPdfList       list of PKS PDF objects
-     * @param pkpResultsList   PKP_details
-     * @param pksDetailsList   PKS_details (KrfResult)
-     * @param carResultsList   Car_results
-     * @param excludedCarsList Excluded_cars
+     * @param pkpPdf            single PKP info object
+     * @param pksPdfList        list of PKS PDF objects
+     * @param pkpResultsList    PKP_details
+     * @param pksDetailsList    PKS_details (KrfResult)
+     * @param carResultsList    Car_results
+     * @param excludedCarsList  Excluded_cars
      * @param carThresholdsList Cars_thresholds
-     * @param response         HTTP response
+     * @param response          HTTP response
      * @throws IOException
      */
     public void generateExcel(
@@ -39,7 +39,7 @@ public class ExcelService {
 
         // Construct file name based on pkp_name + pkp_date
         String dateString = (pkpPdf.getPkp_date() != null)
-                ? pkpPdf.getPkp_date().format(DateTimeFormatter.ISO_DATE) 
+                ? pkpPdf.getPkp_date().format(DateTimeFormatter.ISO_DATE)
                 : "unknown_date";
         String fileName = pkpPdf.getPkp_name() + "_" + dateString + ".xlsx";
 
@@ -51,27 +51,27 @@ public class ExcelService {
 
             // 1) Create Worksheet PKP
             Worksheet wsPKP = workbook.newWorksheet("PKP");
-            createPkpSheet(wsPKP, workbook, pkpPdf, pksPdfList);
+            createPkpSheet(wsPKP, pkpPdf, pksPdfList);
 
             // 2) Create Worksheet PKP_details
             Worksheet wsPkpDetails = workbook.newWorksheet("PKP_details");
-            createPkpDetailsSheet(wsPkpDetails, workbook, pkpResultsList);
+            createPkpDetailsSheet(wsPkpDetails, pkpResultsList);
 
             // 3) Create Worksheet PKS_details
             Worksheet wsPksDetails = workbook.newWorksheet("PKS_details");
-            createPksDetailsSheet(wsPksDetails, workbook, pksDetailsList);
+            createPksDetailsSheet(wsPksDetails, pksDetailsList);
 
             // 4) Create Worksheet Car_results
             Worksheet wsCarResults = workbook.newWorksheet("Car_results");
-            createCarResultsSheet(wsCarResults, workbook, carResultsList);
+            createCarResultsSheet(wsCarResults, carResultsList);
 
             // 5) Create Worksheet Excluded_cars
             Worksheet wsExcluded = workbook.newWorksheet("Excluded_cars");
-            createExcludedCarsSheet(wsExcluded, workbook, excludedCarsList);
+            createExcludedCarsSheet(wsExcluded, excludedCarsList);
 
             // 6) Create Worksheet Cars_thresholds
             Worksheet wsCarThresholds = workbook.newWorksheet("Cars_thresholds");
-            createCarThresholdsSheet(wsCarThresholds, workbook, carThresholdsList);
+            createCarThresholdsSheet(wsCarThresholds, carThresholdsList);
 
             // Finish and flush
             workbook.finish();
@@ -81,167 +81,162 @@ public class ExcelService {
 
     /**
      * Worksheet 1: PKP
+     *
+     * Layout:
+     *  1) Row 1 (bold, font size 14): pkp_name (col width ~500)
+     *  2) Row 2: pkp_date
+     *  3) Two empty rows
+     *  4) Header row: [empty, Accuracy, Completeness, Consistency, Timeliness] (width ~150 each)
+     *  5) Row: "System Based", color-coded values
+     *  6) Row: "Adjusted", color-coded values
+     *  7) Two empty rows
+     *  8) Row: "samochod owner comment:"
+     *  9) Row: pkp_comment
+     *  10) Two empty rows
+     *  11) Row: "Polska Klasa Samochodow", then columns [Accuracy, Completeness, Consistency, Timeliness] in bold
+     *  12) Each PksPdf in pksPdfList => row with pks_name(bold), color-coded A/C/C/T
+     *  13) Two empty rows
+     *  14) Row: "Created at " + pkp_comment_timestamp
+     *  15) Row: "uuid " + pkp_comment_uuid
      */
-    private void createPkpSheet(Worksheet sheet, Workbook workbook, PkpPdf pkpPdf, List<PksPdf> pksPdfList) {
-
-        // Some styles
-        Style bold14 = workbook.addStyle().fontSize(14).bold();
-        Style bold = workbook.addStyle().bold();
-        Style wrapStyle = workbook.addStyle().wrapText(true);
-        Style boldWrap = workbook.addStyle().bold().wrapText(true);
-
-        // You could also define these color-coded styles upfront if you prefer
-        // For example:
-        // Style redFont = workbook.addStyle().fontColor(Color.RED);
+    private void createPkpSheet(Worksheet sheet, PkpPdf pkpPdf, List<PksPdf> pksPdfList) {
 
         // Row tracker
-        int rowIndex = 0;
+        int row = 0;
 
-        // 1) First row: bold 14, pkp_name
-        sheet.value(rowIndex, 0, pkpPdf.getPkp_name()).style(bold14);
-        // width ~500 for the first column
-        sheet.width(0, 500);
-        rowIndex++;
+        // 1) Row 1: pkp_name in bold, font size 14
+        sheet.value(row, 0, safeString(pkpPdf.getPkp_name()))
+                .bold()
+                .fontSize(14);
+        // Approximate column width for the first column (~500 px is not direct, we guess a big enough width):
+        sheet.width(0, 100); // Adjust as needed
 
-        // 2) Second row: pkp_date
+        row++;
+
+        // 2) Row 2: pkp_date
         String dateString = (pkpPdf.getPkp_date() != null)
                 ? pkpPdf.getPkp_date().format(DateTimeFormatter.ISO_DATE)
                 : "";
-        sheet.value(rowIndex, 0, dateString);
-        rowIndex++;
+        sheet.value(row, 0, dateString);
+        row++;
 
         // 3) Two empty rows
-        rowIndex += 2;
+        row += 2;
 
-        // 4) Header row for Accuracy, Completeness, Consistency, Timeliness
-        //    first cell empty, then 4 bold headers
-        //    set each of these columns to width ~150
-        sheet.value(rowIndex, 0, "").style(bold);
-        sheet.value(rowIndex, 1, "Accuracy").style(boldWrap);
-        sheet.value(rowIndex, 2, "Completeness").style(boldWrap);
-        sheet.value(rowIndex, 3, "Consistency").style(boldWrap);
-        sheet.value(rowIndex, 4, "Timeliness").style(boldWrap);
+        // 4) Headers row: first cell empty, next 4 bold with wrap & ~150 width
+        sheet.value(row, 0, "").bold();
+        sheet.value(row, 1, "Accuracy").bold().wrapText(true);
+        sheet.value(row, 2, "Completeness").bold().wrapText(true);
+        sheet.value(row, 3, "Consistency").bold().wrapText(true);
+        sheet.value(row, 4, "Timeliness").bold().wrapText(true);
 
-        sheet.width(1, 150);
-        sheet.width(2, 150);
-        sheet.width(3, 150);
-        sheet.width(4, 150);
+        // Set column widths (approx):
+        sheet.width(1, 30);
+        sheet.width(2, 30);
+        sheet.width(3, 30);
+        sheet.width(4, 30);
 
-        rowIndex++;
+        row++;
 
-        // 5) Row: "System Based" 
-        sheet.value(rowIndex, 0, "System Based").style(bold);
-        // color-coded cells for pkpPdf accuracy, completeness, etc
-        applyColorCodedValue(sheet, workbook, rowIndex, 1, pkpPdf.getAccuracy());
-        applyColorCodedValue(sheet, workbook, rowIndex, 2, pkpPdf.getCompleteness());
-        applyColorCodedValue(sheet, workbook, rowIndex, 3, pkpPdf.getConsistency());
-        applyColorCodedValue(sheet, workbook, rowIndex, 4, pkpPdf.getTimeliness());
-        rowIndex++;
+        // 5) Row: "System Based"
+        sheet.value(row, 0, "System Based").bold();
+        applyColorCodedValue(sheet, row, 1, pkpPdf.getAccuracy());
+        applyColorCodedValue(sheet, row, 2, pkpPdf.getCompleteness());
+        applyColorCodedValue(sheet, row, 3, pkpPdf.getConsistency());
+        applyColorCodedValue(sheet, row, 4, pkpPdf.getTimeliness());
+        row++;
 
         // 6) Row: "Adjusted"
-        sheet.value(rowIndex, 0, "Adjusted").style(bold);
-        applyColorCodedValue(sheet, workbook, rowIndex, 1, pkpPdf.getAccuracy_amended());
-        applyColorCodedValue(sheet, workbook, rowIndex, 2, pkpPdf.getCompleteness_amended());
-        applyColorCodedValue(sheet, workbook, rowIndex, 3, pkpPdf.getConsistency_amended());
-        applyColorCodedValue(sheet, workbook, rowIndex, 4, pkpPdf.getTimeliness_amended());
-        rowIndex++;
+        sheet.value(row, 0, "Adjusted").bold();
+        applyColorCodedValue(sheet, row, 1, pkpPdf.getAccuracy_amended());
+        applyColorCodedValue(sheet, row, 2, pkpPdf.getCompleteness_amended());
+        applyColorCodedValue(sheet, row, 3, pkpPdf.getConsistency_amended());
+        applyColorCodedValue(sheet, row, 4, pkpPdf.getTimeliness_amended());
+        row++;
 
         // 7) Two empty rows
-        rowIndex += 2;
+        row += 2;
 
         // 8) Row: "samochod owner comment:"
-        sheet.value(rowIndex, 0, "samochod owner comment:").style(bold);
-        rowIndex++;
+        sheet.value(row, 0, "samochod owner comment:").bold();
+        row++;
 
         // 9) pkp_comment
-        sheet.value(rowIndex, 0, pkpPdf.getPkp_comment()).style(wrapStyle);
-        rowIndex++;
+        sheet.value(row, 0, safeString(pkpPdf.getPkp_comment()))
+                .wrapText(true);
+        row++;
 
         // 10) Two empty rows
-        rowIndex += 2;
+        row += 2;
 
-        // 11) Row: "Polska Klasa Samochodow", bold in first cell, 
-        //     next columns bold headers "Accuracy", "Completeness", etc.
-        sheet.value(rowIndex, 0, "Polska Klasa Samochodow").style(bold);
-        sheet.value(rowIndex, 1, "Accuracy").style(boldWrap);
-        sheet.value(rowIndex, 2, "Completeness").style(boldWrap);
-        sheet.value(rowIndex, 3, "Consistency").style(boldWrap);
-        sheet.value(rowIndex, 4, "Timeliness").style(boldWrap);
-        rowIndex++;
+        // 11) Row: "Polska Klasa Samochodow", then bold headers A/C/C/T
+        sheet.value(row, 0, "Polska Klasa Samochodow").bold();
+        sheet.value(row, 1, "Accuracy").bold().wrapText(true);
+        sheet.value(row, 2, "Completeness").bold().wrapText(true);
+        sheet.value(row, 3, "Consistency").bold().wrapText(true);
+        sheet.value(row, 4, "Timeliness").bold().wrapText(true);
+        row++;
 
-        // 12) For each PksPdf, create a row
+        // 12) Rows for each PksPdf
         if (pksPdfList != null) {
             for (PksPdf pks : pksPdfList) {
-                // Column 0: pks_name in bold
-                sheet.value(rowIndex, 0, pks.getPks_name()).style(bold);
-                // Then color-coded cells
-                applyColorCodedValue(sheet, workbook, rowIndex, 1, pks.getAccuracy());
-                applyColorCodedValue(sheet, workbook, rowIndex, 2, pks.getCompleteness());
-                applyColorCodedValue(sheet, workbook, rowIndex, 3, pks.getConsistency());
-                applyColorCodedValue(sheet, workbook, rowIndex, 4, pks.getTimeliness());
-                rowIndex++;
+                sheet.value(row, 0, safeString(pks.getPks_name())).bold();
+                applyColorCodedValue(sheet, row, 1, pks.getAccuracy());
+                applyColorCodedValue(sheet, row, 2, pks.getCompleteness());
+                applyColorCodedValue(sheet, row, 3, pks.getConsistency());
+                applyColorCodedValue(sheet, row, 4, pks.getTimeliness());
+                row++;
             }
         }
 
         // 13) Two empty rows
-        rowIndex += 2;
+        row += 2;
 
-        // 14) Row: "Created at " + pkp_comment_timestamp
-        sheet.value(rowIndex, 0, "Created at " + safeString(pkpPdf.getPkp_comment_timestamp()));
-        rowIndex++;
+        // 14) "Created at " + pkp_comment_timestamp
+        sheet.value(row, 0, "Created at " + safeString(pkpPdf.getPkp_comment_timestamp()));
+        row++;
 
-        // 15) Row: "uuid " + pkp_comment_uuid
-        sheet.value(rowIndex, 0, "uuid " + safeString(pkpPdf.getPkp_comment_uuid()));
-        rowIndex++;
+        // 15) "uuid " + pkp_comment_uuid
+        sheet.value(row, 0, "uuid " + safeString(pkpPdf.getPkp_comment_uuid()));
+        row++;
     }
 
     /**
-     * Helper to apply color-coded text: red, amber, green, default black
+     * Helper for color-coding a single cell:
+     *  - red -> .fontColor(Color.RED)
+     *  - amber -> .fontColor(new Color(255, 192, 0))
+     *  - green -> .fontColor(new Color(0, 176, 80))
+     *  - else -> black
      */
-    private void applyColorCodedValue(Worksheet sheet, Workbook workbook, int row, int col, String value) {
-        if (value == null) {
+    private void applyColorCodedValue(Worksheet sheet, int row, int col, String rawValue) {
+        if (rawValue == null) {
             sheet.value(row, col, "");
             return;
         }
-        Style style = colorStyle(workbook, value);
-        sheet.value(row, col, value).style(style);
-    }
+        String lower = rawValue.trim().toLowerCase();
 
-    /**
-     * Creates a style with the font color depending on 'red', 'amber', 'green' (case-insensitive).
-     * Otherwise, black font color.
-     */
-    private Style colorStyle(Workbook workbook, String ragValue) {
-        String val = ragValue.trim().toLowerCase();
-        Style style = workbook.addStyle().wrapText(true);
+        CellData cell = sheet.value(row, col, rawValue)
+                .wrapText(true); // always wrap
 
-        switch (val) {
+        switch (lower) {
             case "red":
-                style = style.fontColor(Color.RED);
+                cell.fontColor(Color.RED);
                 break;
             case "amber":
-                // a typical amber color: #FFC000 in hex
-                style = style.fontColor(new Color(255, 192, 0));
+                cell.fontColor(new Color(255, 192, 0));
                 break;
             case "green":
-                // a typical green color: #00B050
-                style = style.fontColor(new Color(0, 176, 80));
+                cell.fontColor(new Color(0, 176, 80));
                 break;
             default:
-                // black or default
-                style = style.fontColor(Color.BLACK);
+                cell.fontColor(Color.BLACK);
         }
-        return style;
-    }
-
-    private String safeString(String input) {
-        return (input == null) ? "" : input;
     }
 
     /**
      * Worksheet 2: PKP_details
      *
-     * - PKPResults:
+     * - PkpResults:
      *   int pkp_id;
      *   LocalDate pkp_date;
      *   String pkp_name;
@@ -253,47 +248,43 @@ public class ExcelService {
      *   String pkp_status;
      *   String pkp_status_amended;
      */
-    private void createPkpDetailsSheet(Worksheet sheet, Workbook workbook, List<PkpResults> pkpResultsList) {
-        // Bold style
-        Style bold = workbook.addStyle().bold();
-        // Wrap style
-        Style wrap = workbook.addStyle().wrapText(true);
-
-        // Header
+    private void createPkpDetailsSheet(Worksheet sheet, List<PkpResults> pkpResultsList) {
         int row = 0;
-        sheet.value(row, 0, "PKP ID").style(bold);
-        sheet.value(row, 1, "PKP DATE").style(bold);
-        sheet.value(row, 2, "PKP NAME").style(bold);
-        sheet.value(row, 3, "DIMENSION").style(bold);
-        sheet.value(row, 4, "RED").style(bold);
-        sheet.value(row, 5, "AMBER").style(bold);
-        sheet.value(row, 6, "GREEN").style(bold);
-        sheet.value(row, 7, "NA").style(bold);
-        sheet.value(row, 8, "PKP STATUS").style(bold);
-        sheet.value(row, 9, "PKP STATUS AMENDED").style(bold);
 
-        // fix width ~500 for PKP NAME column
-        sheet.width(2, 500);
+        // Header row (bold)
+        sheet.value(row, 0, "PKP ID").bold();
+        sheet.value(row, 1, "PKP DATE").bold();
+        sheet.value(row, 2, "PKP NAME").bold();
+        sheet.value(row, 3, "DIMENSION").bold();
+        sheet.value(row, 4, "RED").bold();
+        sheet.value(row, 5, "AMBER").bold();
+        sheet.value(row, 6, "GREEN").bold();
+        sheet.value(row, 7, "NA").bold();
+        sheet.value(row, 8, "PKP STATUS").bold();
+        sheet.value(row, 9, "PKP STATUS AMENDED").bold();
+
+        // Approximate large width for PKP NAME
+        sheet.width(2, 100); // adjust as needed
 
         row++;
 
-        // Data
+        // Data rows
         if (pkpResultsList != null) {
             DateTimeFormatter fmt = DateTimeFormatter.ISO_DATE;
             for (PkpResults pr : pkpResultsList) {
                 sheet.value(row, 0, pr.getPkp_id());
-                // pkp_date
                 String dateString = (pr.getPkp_date() != null) ? pr.getPkp_date().format(fmt) : "";
-                sheet.value(row, 1, dateString).style(wrap);
+                sheet.value(row, 1, dateString).wrapText(true);
 
-                sheet.value(row, 2, safeString(pr.getPkp_name())).style(wrap);
-                sheet.value(row, 3, safeString(pr.getDimension())).style(wrap);
+                sheet.value(row, 2, safeString(pr.getPkp_name())).wrapText(true);
+                sheet.value(row, 3, safeString(pr.getDimension())).wrapText(true);
                 sheet.value(row, 4, pr.getRed());
                 sheet.value(row, 5, pr.getAmber());
                 sheet.value(row, 6, pr.getGreen());
                 sheet.value(row, 7, pr.getNa());
-                sheet.value(row, 8, safeString(pr.getPkp_status())).style(wrap);
-                sheet.value(row, 9, safeString(pr.getPkp_status_amended())).style(wrap);
+                sheet.value(row, 8, safeString(pr.getPkp_status())).wrapText(true);
+                sheet.value(row, 9, safeString(pr.getPkp_status_amended())).wrapText(true);
+
                 row++;
             }
         }
@@ -302,7 +293,7 @@ public class ExcelService {
     /**
      * Worksheet 3: PKS_details
      *
-     * - KRFResult:
+     * - KrfResult:
      *   int pkp_id;
      *   int pks_id;
      *   LocalDate pkp_date;
@@ -314,22 +305,20 @@ public class ExcelService {
      *   int na;
      *   String rag_status;
      */
-    private void createPksDetailsSheet(Worksheet sheet, Workbook workbook, List<KrfResult> pksDetailsList) {
-        Style bold = workbook.addStyle().bold();
-        Style wrap = workbook.addStyle().wrapText(true);
-
+    private void createPksDetailsSheet(Worksheet sheet, List<KrfResult> pksDetailsList) {
         int row = 0;
+
         // Headers
-        sheet.value(row, 0, "PKP ID").style(bold);
-        sheet.value(row, 1, "PKS ID").style(bold);
-        sheet.value(row, 2, "PKP DATE").style(bold);
-        sheet.value(row, 3, "PKS NAME").style(bold);
-        sheet.value(row, 4, "DIMENSION").style(bold);
-        sheet.value(row, 5, "RED").style(bold);
-        sheet.value(row, 6, "AMBER").style(bold);
-        sheet.value(row, 7, "GREEN").style(bold);
-        sheet.value(row, 8, "NA").style(bold);
-        sheet.value(row, 9, "RAG STATUS").style(bold);
+        sheet.value(row, 0, "PKP ID").bold();
+        sheet.value(row, 1, "PKS ID").bold();
+        sheet.value(row, 2, "PKP DATE").bold();
+        sheet.value(row, 3, "PKS NAME").bold();
+        sheet.value(row, 4, "DIMENSION").bold();
+        sheet.value(row, 5, "RED").bold();
+        sheet.value(row, 6, "AMBER").bold();
+        sheet.value(row, 7, "GREEN").bold();
+        sheet.value(row, 8, "NA").bold();
+        sheet.value(row, 9, "RAG STATUS").bold();
         row++;
 
         // Data
@@ -339,14 +328,14 @@ public class ExcelService {
                 sheet.value(row, 0, kr.getPkp_id());
                 sheet.value(row, 1, kr.getPks_id());
                 String dateString = (kr.getPkp_date() != null) ? kr.getPkp_date().format(fmt) : "";
-                sheet.value(row, 2, dateString).style(wrap);
-                sheet.value(row, 3, safeString(kr.getPks_name())).style(wrap);
-                sheet.value(row, 4, safeString(kr.getDimension())).style(wrap);
+                sheet.value(row, 2, dateString).wrapText(true);
+                sheet.value(row, 3, safeString(kr.getPks_name())).wrapText(true);
+                sheet.value(row, 4, safeString(kr.getDimension())).wrapText(true);
                 sheet.value(row, 5, kr.getRed());
                 sheet.value(row, 6, kr.getAmber());
                 sheet.value(row, 7, kr.getGreen());
                 sheet.value(row, 8, kr.getNa());
-                sheet.value(row, 9, safeString(kr.getRag_status())).style(wrap);
+                sheet.value(row, 9, safeString(kr.getRag_status())).wrapText(true);
 
                 row++;
             }
@@ -360,37 +349,34 @@ public class ExcelService {
      *   int car_id;
      *   String car_name;
      *   String dimension;
-     *   String red;    // (some data)
-     *   String amber;  // ...
+     *   String red;
+     *   String amber;
      *   Double car_score;
      *   String car_status;
      */
-    private void createCarResultsSheet(Worksheet sheet, Workbook workbook, List<CarResults> carResultsList) {
-        Style bold = workbook.addStyle().bold();
-        Style wrap = workbook.addStyle().wrapText(true);
-
+    private void createCarResultsSheet(Worksheet sheet, List<CarResults> carResultsList) {
         int row = 0;
+
         // Header
-        sheet.value(row, 0, "CAR ID").style(bold);
-        sheet.value(row, 1, "CAR NAME").style(bold);
-        sheet.value(row, 2, "DIMENSION").style(bold);
-        sheet.value(row, 3, "RED").style(bold);
-        sheet.value(row, 4, "AMBER").style(bold);
-        sheet.value(row, 5, "CAR SCORE").style(bold);
-        sheet.value(row, 6, "CAR STATUS").style(bold);
+        sheet.value(row, 0, "CAR ID").bold();
+        sheet.value(row, 1, "CAR NAME").bold();
+        sheet.value(row, 2, "DIMENSION").bold();
+        sheet.value(row, 3, "RED").bold();
+        sheet.value(row, 4, "AMBER").bold();
+        sheet.value(row, 5, "CAR SCORE").bold();
+        sheet.value(row, 6, "CAR STATUS").bold();
         row++;
 
         // Data
         if (carResultsList != null) {
             for (CarResults cr : carResultsList) {
                 sheet.value(row, 0, cr.getCar_id());
-                sheet.value(row, 1, safeString(cr.getCar_name())).style(wrap);
-                sheet.value(row, 2, safeString(cr.getDimension())).style(wrap);
-                sheet.value(row, 3, safeString(cr.getRed())).style(wrap);
-                sheet.value(row, 4, safeString(cr.getAmber())).style(wrap);
-                // If car_score is not null
-                sheet.value(row, 5, (cr.getCar_score() == null) ? "" : cr.getCar_score());
-                sheet.value(row, 6, safeString(cr.getCar_status())).style(wrap);
+                sheet.value(row, 1, safeString(cr.getCar_name())).wrapText(true);
+                sheet.value(row, 2, safeString(cr.getDimension())).wrapText(true);
+                sheet.value(row, 3, safeString(cr.getRed())).wrapText(true);
+                sheet.value(row, 4, safeString(cr.getAmber())).wrapText(true);
+                sheet.value(row, 5, (cr.getCar_score() != null) ? cr.getCar_score() : "");
+                sheet.value(row, 6, safeString(cr.getCar_status())).wrapText(true);
                 row++;
             }
         }
@@ -404,21 +390,19 @@ public class ExcelService {
      *   String car_name;
      *   String exclusion_reason;
      */
-    private void createExcludedCarsSheet(Worksheet sheet, Workbook workbook, List<ExcludedCars> excludedCarsList) {
-        Style bold = workbook.addStyle().bold();
-        Style wrap = workbook.addStyle().wrapText(true);
-
+    private void createExcludedCarsSheet(Worksheet sheet, List<ExcludedCars> excludedCarsList) {
         int row = 0;
-        sheet.value(row, 0, "CAR ID").style(bold);
-        sheet.value(row, 1, "CAR NAME").style(bold);
-        sheet.value(row, 2, "EXCLUSION REASON").style(bold);
+
+        sheet.value(row, 0, "CAR ID").bold();
+        sheet.value(row, 1, "CAR NAME").bold();
+        sheet.value(row, 2, "EXCLUSION REASON").bold();
         row++;
 
         if (excludedCarsList != null) {
             for (ExcludedCars ec : excludedCarsList) {
                 sheet.value(row, 0, ec.getCar_id());
-                sheet.value(row, 1, safeString(ec.getCar_name())).style(wrap);
-                sheet.value(row, 2, safeString(ec.getExclusion_reason())).style(wrap);
+                sheet.value(row, 1, safeString(ec.getCar_name())).wrapText(true);
+                sheet.value(row, 2, safeString(ec.getExclusion_reason())).wrapText(true);
                 row++;
             }
         }
@@ -434,21 +418,19 @@ public class ExcelService {
      *   int consistency;
      *   int timeliness;
      */
-    private void createCarThresholdsSheet(Worksheet sheet, Workbook workbook, List<CarThresholds> carThresholdsList) {
-        Style bold = workbook.addStyle().bold();
-        Style wrap = workbook.addStyle().wrapText(true);
-
+    private void createCarThresholdsSheet(Worksheet sheet, List<CarThresholds> carThresholdsList) {
         int row = 0;
-        sheet.value(row, 0, "CAR NAME").style(bold);
-        sheet.value(row, 1, "ACCURACY").style(bold);
-        sheet.value(row, 2, "COMPLETENESS").style(bold);
-        sheet.value(row, 3, "CONSISTENCY").style(bold);
-        sheet.value(row, 4, "TIMELINESS").style(bold);
+
+        sheet.value(row, 0, "CAR NAME").bold();
+        sheet.value(row, 1, "ACCURACY").bold();
+        sheet.value(row, 2, "COMPLETENESS").bold();
+        sheet.value(row, 3, "CONSISTENCY").bold();
+        sheet.value(row, 4, "TIMELINESS").bold();
         row++;
 
         if (carThresholdsList != null) {
             for (CarThresholds ct : carThresholdsList) {
-                sheet.value(row, 0, safeString(ct.getCar_name())).style(wrap);
+                sheet.value(row, 0, safeString(ct.getCar_name())).wrapText(true);
                 sheet.value(row, 1, ct.getAccuracy());
                 sheet.value(row, 2, ct.getCompleteness());
                 sheet.value(row, 3, ct.getConsistency());
@@ -456,5 +438,12 @@ public class ExcelService {
                 row++;
             }
         }
+    }
+
+    /**
+     * Utility to avoid null pointer on strings.
+     */
+    private String safeString(String val) {
+        return (val == null) ? "" : val;
     }
 }
