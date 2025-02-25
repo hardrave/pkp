@@ -62,19 +62,17 @@ public class ExcelService {
             Worksheet wsCarThresholds = workbook.newWorksheet("Cars_thresholds");
             createCarThresholdsSheet(wsCarThresholds, carThresholdsList);
 
-            // Finish
+            // Finish workbook
             workbook.finish();
             outputStream.flush();
         }
     }
 
     /**
-     * =============================
-     * 1) WORKSHEET "PKP"
-     * =============================
+     * 1) Worksheet "PKP"
      *
      * Layout:
-     *  Row 1 (bold,14): pkp_name (col0 width ~500)
+     *  Row 1 (bold, 14): pkp_name (col0 width ~500)
      *  Row 2: pkp_date
      *  +2 empty rows
      *  Next row: [ "", Accuracy, Completeness, Consistency, Timeliness ] => bold
@@ -84,7 +82,7 @@ public class ExcelService {
      *  Row: "samochod owner comment:" (bold)
      *  Row: pkp_comment
      *  +2 empty rows
-     *  Row: "Polska Klasa Samochodow", then bold "Accuracy", "Completeness", "Consistency", "Timeliness"
+     *  Row: "Polska Klasa Samochodow", then bold headers for metrics
      *  Rows for pksPdfList
      *  +2 empty rows
      *  Row: "Created at " + pkp_comment_timestamp
@@ -96,8 +94,8 @@ public class ExcelService {
         // 1) pkp_name in row 0, col 0 (bold, fontSize=14)
         sheet.value(row, 0, safeString(pkpPdf.getPkp_name()));
         sheet.style(row, 0).bold(true).fontSize(14);
-        // approximate "width ~500 px" means a large column width; you may need to tweak
-        sheet.width(0, 100); // trial and error
+        // Set approximate width (adjust as needed)
+        sheet.width(0, 100);
 
         row++;
 
@@ -107,10 +105,10 @@ public class ExcelService {
 
         row++;
 
-        // 3) two empty rows
+        // 3) Two empty rows
         row += 2;
 
-        // 4) header row [ "", Accuracy, Completeness, Consistency, Timeliness ] (bold + wrap)
+        // 4) Header row: [ "", Accuracy, Completeness, Consistency, Timeliness ]
         sheet.value(row, 0, "");
         sheet.style(row, 0).bold(true);
 
@@ -126,7 +124,7 @@ public class ExcelService {
         sheet.value(row, 4, "Timeliness");
         sheet.style(row, 4).bold(true).wrapText(true);
 
-        // approximate column widths
+        // Set approximate column widths
         sheet.width(1, 30);
         sheet.width(2, 30);
         sheet.width(3, 30);
@@ -134,7 +132,7 @@ public class ExcelService {
 
         row++;
 
-        // 5) Row: "System Based"
+        // 5) Row: "System Based" with corresponding values
         sheet.value(row, 0, "System Based");
         sheet.style(row, 0).bold(true);
 
@@ -145,7 +143,7 @@ public class ExcelService {
 
         row++;
 
-        // 6) Row: "Adjusted"
+        // 6) Row: "Adjusted" with corresponding values
         sheet.value(row, 0, "Adjusted");
         sheet.style(row, 0).bold(true);
 
@@ -156,7 +154,7 @@ public class ExcelService {
 
         row++;
 
-        // 7) two empty rows
+        // 7) Two empty rows
         row += 2;
 
         // 8) Row: "samochod owner comment:" (bold)
@@ -169,10 +167,10 @@ public class ExcelService {
         sheet.style(row, 0).wrapText(true);
         row++;
 
-        // 10) two empty rows
+        // 10) Two empty rows
         row += 2;
 
-        // 11) Row: "Polska Klasa Samochodow", then bold headers
+        // 11) Row: "Polska Klasa Samochodow" and headers for metrics
         sheet.value(row, 0, "Polska Klasa Samochodow");
         sheet.style(row, 0).bold(true);
 
@@ -187,7 +185,6 @@ public class ExcelService {
 
         sheet.value(row, 4, "Timeliness");
         sheet.style(row, 4).bold(true).wrapText(true);
-
         row++;
 
         // 12) Rows for pksPdfList
@@ -200,19 +197,18 @@ public class ExcelService {
                 applyColorCodedValue(sheet, row, 2, pks.getCompleteness());
                 applyColorCodedValue(sheet, row, 3, pks.getConsistency());
                 applyColorCodedValue(sheet, row, 4, pks.getTimeliness());
-
                 row++;
             }
         }
 
-        // 13) two empty rows
+        // 13) Two empty rows
         row += 2;
 
         // 14) "Created at " + pkp_comment_timestamp
         sheet.value(row, 0, "Created at " + safeString(pkpPdf.getPkp_comment_timestamp()));
         row++;
 
-        // 15) "uuid " + pkpPdf.getPkp_comment_uuid()
+        // 15) "uuid " + pkp_comment_uuid
         sheet.value(row, 0, "uuid " + safeString(pkpPdf.getPkp_comment_uuid()));
         row++;
     }
@@ -226,7 +222,7 @@ public class ExcelService {
             return;
         }
         sheet.value(row, col, value);
-        sheet.style(row, col).wrapText(true); // always wrap if large
+        sheet.style(row, col).wrapText(true);
 
         String lower = value.trim().toLowerCase();
         switch (lower) {
@@ -234,7 +230,6 @@ public class ExcelService {
                 sheet.style(row, col).fontColor(Color.RED);
                 break;
             case "amber":
-                // typical amber color
                 sheet.style(row, col).fontColor(new Color(255, 192, 0));
                 break;
             case "green":
@@ -246,9 +241,7 @@ public class ExcelService {
     }
 
     /**
-     * =============================
-     * 2) WORKSHEET "PKP_details"
-     * =============================
+     * 2) Worksheet "PKP_details"
      *
      * Fields in PkpResults:
      *   int pkp_id;
@@ -266,23 +259,31 @@ public class ExcelService {
         int row = 0;
 
         // Header row
-        sheet.value(row, 0, "PKP ID"); sheet.style(row, 0).bold(true);
-        sheet.value(row, 1, "PKP DATE"); sheet.style(row, 1).bold(true);
-        sheet.value(row, 2, "PKP NAME"); sheet.style(row, 2).bold(true);
-        sheet.value(row, 3, "DIMENSION"); sheet.style(row, 3).bold(true);
-        sheet.value(row, 4, "RED"); sheet.style(row, 4).bold(true);
-        sheet.value(row, 5, "AMBER"); sheet.style(row, 5).bold(true);
-        sheet.value(row, 6, "GREEN"); sheet.style(row, 6).bold(true);
-        sheet.value(row, 7, "NA"); sheet.style(row, 7).bold(true);
-        sheet.value(row, 8, "PKP STATUS"); sheet.style(row, 8).bold(true);
-        sheet.value(row, 9, "PKP STATUS AMENDED"); sheet.style(row, 9).bold(true);
-
-        // Large column width for PKP NAME
+        sheet.value(row, 0, "PKP ID");
+        sheet.style(row, 0).bold(true);
+        sheet.value(row, 1, "PKP DATE");
+        sheet.style(row, 1).bold(true);
+        sheet.value(row, 2, "PKP NAME");
+        sheet.style(row, 2).bold(true);
+        sheet.value(row, 3, "DIMENSION");
+        sheet.style(row, 3).bold(true);
+        sheet.value(row, 4, "RED");
+        sheet.style(row, 4).bold(true);
+        sheet.value(row, 5, "AMBER");
+        sheet.style(row, 5).bold(true);
+        sheet.value(row, 6, "GREEN");
+        sheet.style(row, 6).bold(true);
+        sheet.value(row, 7, "NA");
+        sheet.style(row, 7).bold(true);
+        sheet.value(row, 8, "PKP STATUS");
+        sheet.style(row, 8).bold(true);
+        sheet.value(row, 9, "PKP STATUS AMENDED");
+        sheet.style(row, 9).bold(true);
+        // Set larger column width for PKP NAME
         sheet.width(2, 80);
-
         row++;
 
-        // Data
+        // Data rows
         if (pkpResultsList != null) {
             for (PkpResults pr : pkpResultsList) {
                 sheet.value(row, 0, pr.getPkp_id());
@@ -307,18 +308,15 @@ public class ExcelService {
 
                 sheet.value(row, 9, safeString(pr.getPkp_status_amended()));
                 sheet.style(row, 9).wrapText(true);
-
                 row++;
             }
         }
     }
 
     /**
-     * =============================
-     * 3) WORKSHEET "PKS_details"
-     * =============================
+     * 3) Worksheet "PKS_details"
      *
-     * KrfResult:
+     * Fields in KrfResult:
      *   int pkp_id;
      *   int pks_id;
      *   LocalDate pkp_date;
@@ -333,20 +331,30 @@ public class ExcelService {
     private void createPksDetailsSheet(Worksheet sheet, List<KrfResult> pksDetailsList) {
         int row = 0;
 
-        // Headers
-        sheet.value(row, 0, "PKP ID").bold(true);
-        sheet.value(row, 1, "PKS ID").bold(true);
-        sheet.value(row, 2, "PKP DATE").bold(true);
-        sheet.value(row, 3, "PKS NAME").bold(true);
-        sheet.value(row, 4, "DIMENSION").bold(true);
-        sheet.value(row, 5, "RED").bold(true);
-        sheet.value(row, 6, "AMBER").bold(true);
-        sheet.value(row, 7, "GREEN").bold(true);
-        sheet.value(row, 8, "NA").bold(true);
-        sheet.value(row, 9, "RAG STATUS").bold(true);
-
+        // Header row
+        sheet.value(row, 0, "PKP ID");
+        sheet.style(row, 0).bold(true);
+        sheet.value(row, 1, "PKS ID");
+        sheet.style(row, 1).bold(true);
+        sheet.value(row, 2, "PKP DATE");
+        sheet.style(row, 2).bold(true);
+        sheet.value(row, 3, "PKS NAME");
+        sheet.style(row, 3).bold(true);
+        sheet.value(row, 4, "DIMENSION");
+        sheet.style(row, 4).bold(true);
+        sheet.value(row, 5, "RED");
+        sheet.style(row, 5).bold(true);
+        sheet.value(row, 6, "AMBER");
+        sheet.style(row, 6).bold(true);
+        sheet.value(row, 7, "GREEN");
+        sheet.style(row, 7).bold(true);
+        sheet.value(row, 8, "NA");
+        sheet.style(row, 8).bold(true);
+        sheet.value(row, 9, "RAG STATUS");
+        sheet.style(row, 9).bold(true);
         row++;
 
+        // Data rows
         if (pksDetailsList != null) {
             for (KrfResult kr : pksDetailsList) {
                 sheet.value(row, 0, kr.getPkp_id());
@@ -369,18 +377,15 @@ public class ExcelService {
 
                 sheet.value(row, 9, safeString(kr.getRag_status()));
                 sheet.style(row, 9).wrapText(true);
-
                 row++;
             }
         }
     }
 
     /**
-     * =============================
-     * 4) WORKSHEET "Car_results"
-     * =============================
+     * 4) Worksheet "Car_results"
      *
-     * CarResults:
+     * Fields in CarResults:
      *   int car_id;
      *   String car_name;
      *   String dimension;
@@ -392,21 +397,28 @@ public class ExcelService {
     private void createCarResultsSheet(Worksheet sheet, List<CarResults> carResultsList) {
         int row = 0;
 
-        // Header
-        sheet.value(row, 0, "CAR ID").bold(true);
-        sheet.value(row, 1, "CAR NAME").bold(true);
-        sheet.value(row, 2, "DIMENSION").bold(true);
-        sheet.value(row, 3, "RED").bold(true);
-        sheet.value(row, 4, "AMBER").bold(true);
-        sheet.value(row, 5, "CAR SCORE").bold(true);
-        sheet.value(row, 6, "CAR STATUS").bold(true);
-
+        // Header row
+        sheet.value(row, 0, "CAR ID");
+        sheet.style(row, 0).bold(true);
+        sheet.value(row, 1, "CAR NAME");
+        sheet.style(row, 1).bold(true);
+        sheet.value(row, 2, "DIMENSION");
+        sheet.style(row, 2).bold(true);
+        sheet.value(row, 3, "RED");
+        sheet.style(row, 3).bold(true);
+        sheet.value(row, 4, "AMBER");
+        sheet.style(row, 4).bold(true);
+        sheet.value(row, 5, "CAR SCORE");
+        sheet.style(row, 5).bold(true);
+        sheet.value(row, 6, "CAR STATUS");
+        sheet.style(row, 6).bold(true);
         row++;
 
-        // Data
+        // Data rows
         if (carResultsList != null) {
             for (CarResults cr : carResultsList) {
                 sheet.value(row, 0, cr.getCar_id());
+
                 sheet.value(row, 1, safeString(cr.getCar_name()));
                 sheet.style(row, 1).wrapText(true);
 
@@ -423,18 +435,15 @@ public class ExcelService {
 
                 sheet.value(row, 6, safeString(cr.getCar_status()));
                 sheet.style(row, 6).wrapText(true);
-
                 row++;
             }
         }
     }
 
     /**
-     * =============================
-     * 5) WORKSHEET "Excluded_cars"
-     * =============================
+     * 5) Worksheet "Excluded_cars"
      *
-     * ExcludedCars:
+     * Fields in ExcludedCars:
      *   int car_id;
      *   String car_name;
      *   String exclusion_reason;
@@ -442,11 +451,15 @@ public class ExcelService {
     private void createExcludedCarsSheet(Worksheet sheet, List<ExcludedCars> excludedCarsList) {
         int row = 0;
 
-        sheet.value(row, 0, "CAR ID").bold(true);
-        sheet.value(row, 1, "CAR NAME").bold(true);
-        sheet.value(row, 2, "EXCLUSION REASON").bold(true);
+        sheet.value(row, 0, "CAR ID");
+        sheet.style(row, 0).bold(true);
+        sheet.value(row, 1, "CAR NAME");
+        sheet.style(row, 1).bold(true);
+        sheet.value(row, 2, "EXCLUSION REASON");
+        sheet.style(row, 2).bold(true);
         row++;
 
+        // Data rows
         if (excludedCarsList != null) {
             for (ExcludedCars ec : excludedCarsList) {
                 sheet.value(row, 0, ec.getCar_id());
@@ -456,18 +469,15 @@ public class ExcelService {
 
                 sheet.value(row, 2, safeString(ec.getExclusion_reason()));
                 sheet.style(row, 2).wrapText(true);
-
                 row++;
             }
         }
     }
 
     /**
-     * =============================
-     * 6) WORKSHEET "Cars_thresholds"
-     * =============================
+     * 6) Worksheet "Cars_thresholds"
      *
-     * CarThresholds:
+     * Fields in CarThresholds:
      *   String car_name;
      *   int accuracy;
      *   int completeness;
@@ -477,13 +487,19 @@ public class ExcelService {
     private void createCarThresholdsSheet(Worksheet sheet, List<CarThresholds> carThresholdsList) {
         int row = 0;
 
-        sheet.value(row, 0, "CAR NAME").bold(true);
-        sheet.value(row, 1, "ACCURACY").bold(true);
-        sheet.value(row, 2, "COMPLETENESS").bold(true);
-        sheet.value(row, 3, "CONSISTENCY").bold(true);
-        sheet.value(row, 4, "TIMELINESS").bold(true);
+        sheet.value(row, 0, "CAR NAME");
+        sheet.style(row, 0).bold(true);
+        sheet.value(row, 1, "ACCURACY");
+        sheet.style(row, 1).bold(true);
+        sheet.value(row, 2, "COMPLETENESS");
+        sheet.style(row, 2).bold(true);
+        sheet.value(row, 3, "CONSISTENCY");
+        sheet.style(row, 3).bold(true);
+        sheet.value(row, 4, "TIMELINESS");
+        sheet.style(row, 4).bold(true);
         row++;
 
+        // Data rows
         if (carThresholdsList != null) {
             for (CarThresholds ct : carThresholdsList) {
                 sheet.value(row, 0, safeString(ct.getCar_name()));
@@ -498,7 +514,7 @@ public class ExcelService {
         }
     }
 
-    // --- Utilities --- //
+    // --- Utility methods --- //
 
     private String safeString(String val) {
         return (val == null) ? "" : val;
