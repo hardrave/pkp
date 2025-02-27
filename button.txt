@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Go Back Button</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Floating Button -->
+    <button class="floating-btn" id="goBackBtn">← Go Back</button>
+
+    <script src="main.js"></script>
+
+</body>
+</html>
+
+/* Floating Button Styles */
+.floating-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #007bff;
+    color: white;
+    padding: 12px 18px;
+    font-size: 16px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease, transform 0.2s ease-in-out;
+}
+
+.floating-btn:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("goBackBtn").addEventListener("click", function () {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            alert("No previous page found!");
+        }
+    });
+});
